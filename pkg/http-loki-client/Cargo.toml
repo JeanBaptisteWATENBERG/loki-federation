@@ -1,0 +1,16 @@
+[package]
+name = "http-loki-client"
+authors = ["Jean-Baptiste WATENBERG <jeanbaptiste.watenberg@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "http_loki_client"
+
+[dependencies]
+generic-loki-client = { path = "../generic-loki-client" }
+reqwest = "0.11.7"
+serde = "1.0.132"
+serde_json = "1.0.73"
+async-trait = "0.1.52"
+anyhow = "1.0.51"

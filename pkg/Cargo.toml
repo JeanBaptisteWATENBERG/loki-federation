@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "bin/cli",
+    "core",
+    "generic-loki-client",
+    "http-loki-client"
+]
+
+default-members=["bin/cli"]
+

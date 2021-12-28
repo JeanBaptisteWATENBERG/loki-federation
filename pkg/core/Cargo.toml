@@ -1,0 +1,21 @@
+[package]
+name = "loki-federation-core"
+authors = ["Jean-Baptiste WATENBERG <jeanbaptiste.watenberg@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "loki_federation_core"
+
+[dependencies]
+generic-loki-client = { path = "../generic-loki-client" }
+http-loki-client = { path = "../http-loki-client" }
+anyhow = "1.0.51"
+tokio = { version = "1.15.0", features = ["full"] }
+futures = "0.3.19"
+serde_json = "1.0.73"
+serde = { version = "1.0.132", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1.0.73"
+serde = { version = "1.0.132", features = ["derive"] }

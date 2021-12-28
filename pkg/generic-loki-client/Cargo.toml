@@ -1,0 +1,14 @@
+[package]
+name = "generic-loki-client"
+authors = ["Jean-Baptiste WATENBERG <jeanbaptiste.watenberg@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "generic_loki_client"
+
+[dependencies]
+serde = { version = "1.0.132", features = ["derive"] }
+async-trait = "0.1.52"
+thiserror = "1.0.30"
+anyhow = "1.0.51"
