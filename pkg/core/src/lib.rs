@@ -1,5 +1,5 @@
-use std::collections::HashSet;
-use generic_loki_client::{LokiError, Response, LokiClient, VectorOrStream, Data, ResultType, LabelResponse};
+use std::collections::{HashMap, HashSet};
+use generic_loki_client::{LokiError, Response, LokiClient, VectorOrStream, Data, ResultType, LabelResponse, SerieResponse};
 use http_loki_client::HttpLokiClient;
 use tokio::task;
 use futures::future::join_all;
@@ -147,6 +147,57 @@ impl FederatedLoki {
         let aggregatedLabelResponse = Self::merge_label_responses(responses);
 
         Ok(aggregatedLabelResponse)
+    }
+
+    pub async fn series(&self, matches: Option<Vec<String>>, start: Option<i64>, end: Option<i64>) -> Result<SerieResponse, LokiError> {
+        let buffered_jobs = stream::iter(self.backends.clone())
+            .map(|backend| {
+                let client = HttpLokiClient::new(backend.clone());
+                let matches = matches.clone();
+                async move {
+                    let result = client.series(matches, start, end).await;
+                    result
+                }
+            }).buffer_unordered(MAX_CONCURRENT_REQUESTS).collect::<Vec<Result<SerieResponse, LokiError>>>();
+
+        let responses: Vec<Result<SerieResponse, LokiError>> = buffered_jobs.await;
+        println!("responses: {:?}", responses);
+
+        let aggregatedSerieResponse = Self::merge_serie_responses(responses);
+
+        Ok(aggregatedSerieResponse)
+    }
+
+    fn merge_serie_responses(responses: Vec<Result<SerieResponse, LokiError>>) -> SerieResponse {
+        let mut seriesData: Vec<HashMap<String, String>> = Vec::new();
+
+        for response in responses {
+            match response {
+                Ok(response) => {
+                    response.data.iter().for_each(|serie| {
+                        seriesData.push(serie.clone());
+                    });
+                },
+                Err(error) => {
+                    //todo log error
+                }
+            }
+        }
+
+        //remove duplicates in series data
+        let mut already_seen_series = Vec::new();
+        seriesData.retain(|item| match already_seen_series.contains(item) {
+            true => false,
+            _ => {
+                already_seen_series.push(item.clone());
+                true
+            }
+        });
+
+        SerieResponse {
+            data: already_seen_series,
+            status: "success".to_string(),
+        }
     }
 
     fn merge_label_responses(responses: Vec<Result<LabelResponse, LokiError>>) -> LabelResponse {

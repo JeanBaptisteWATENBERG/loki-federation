@@ -32,6 +32,13 @@ struct Labels {
 }
 
 #[derive(Deserialize)]
+struct Series {
+    matches: Option<Vec<String>>,
+    start: Option<i64>,
+    end: Option<i64>,
+}
+
+#[derive(Deserialize)]
 struct LabelPath {
     label: String
 }
@@ -81,6 +88,22 @@ async fn label_values(path: web::Path<LabelPath>, data: web::Data<AppState>, que
     }
 }
 
+async fn retrieve_series_get_handler(data: web::Data<AppState>, query: web::Query<Series>) -> impl Responder {
+    let result = data.federated_loki.series(query.matches.clone(), query.start, query.end).await;
+    match result {
+        Ok(series) => HttpResponse::Ok().json(series),
+        Err(err) => HttpResponse::InternalServerError().json("{\"error\": \"Internal Server Error\"}"),
+    }
+}
+
+async fn retrieve_series_post_handler(data: web::Data<AppState>, query: web::Form<Series>) -> impl Responder {
+    let result = data.federated_loki.series(query.matches.clone(), query.start, query.end).await;
+    match result {
+        Ok(series) => HttpResponse::Ok().json(series),
+        Err(err) => HttpResponse::InternalServerError().json("{\"error\": \"Internal Server Error\"}"),
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
 
@@ -125,6 +148,8 @@ async fn main() -> std::io::Result<()> {
             .route("/loki/api/v1/labels", web::get().to(labels))
             .route("/loki/api/v1/label", web::get().to(labels))
             .route("/loki/api/v1/label/{label}/values", web::get().to(label_values))
+            .route("/loki/api/v1/series", web::get().to(retrieve_series_get_handler))
+            .route("/loki/api/v1/series", web::post().to(retrieve_series_post_handler))
     })
         .bind(server_bind_address)?
         .run()
