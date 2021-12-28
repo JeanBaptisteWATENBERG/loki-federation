@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use generic_loki_client::{Direction, LabelResponse, LokiClient, LokiError, Response, SerieResponse};
 use async_trait::async_trait;
+use serde::de;
 
 pub struct HttpLokiClient {
     url: String,
@@ -9,6 +10,28 @@ pub struct HttpLokiClient {
 impl HttpLokiClient {
     pub fn new(url: String) -> Self {
         HttpLokiClient { url }
+    }
+
+    async fn parse_result<T: de::DeserializeOwned>(result: Result<reqwest::Response, LokiError>) -> Result<T, LokiError> {
+        if let Ok(result) = result {
+            let body = result.text().await.or_else(|e| {
+                Err(LokiError::Other(anyhow!("{}", e)))
+            });
+            if let Ok(body) = body {
+                let response = serde_json::from_str(&body).or_else(|e| {
+                    Err(LokiError::Other(anyhow!("Failed to parse body {}", e)))
+                });
+                if let Ok(response) = response {
+                    Ok(response)
+                } else {
+                    Err(LokiError::Other(anyhow!("{}", body)))
+                }
+            } else {
+                Err(body.unwrap_err())
+            }
+        } else {
+            Err(LokiError::Other(anyhow!("Failed to query loki")))
+        }
     }
 }
 
@@ -34,25 +57,7 @@ impl LokiClient for HttpLokiClient {
             Err(LokiError::Other(anyhow!("{}", e)))
         });
 
-        if let Ok(result) = result {
-            let body = result.text().await.or_else(|e| {
-                Err(LokiError::Other(anyhow!("{}", e)))
-            });
-            if let Ok(body) = body {
-                let response = serde_json::from_str(&body).or_else(|e| {
-                    Err(LokiError::Other(anyhow!("{}", e)))
-                });
-                if let Ok(response) = response {
-                    Ok(response)
-                } else {
-                    response
-                }
-            } else {
-                Err(LokiError::Other(anyhow!("Failed to parse response body")))
-            }
-        } else {
-            Err(LokiError::Other(anyhow!("Failed to query loki")))
-        }
+        Self::parse_result(result).await
     }
 
     async fn query_range(&self, query: String, start: i64, end: i64, limit: Option<i32>, direction: Option<Direction>, step: Option<String>, interval: Option<String>) -> Result<Response, LokiError> {
@@ -77,25 +82,7 @@ impl LokiClient for HttpLokiClient {
             Err(LokiError::Other(anyhow!("{}", e)))
         });
 
-        if let Ok(result) = result {
-            let body = result.text().await.or_else(|e| {
-                Err(LokiError::Other(anyhow!("{}", e)))
-            });
-            if let Ok(body) = body {
-                let response = serde_json::from_str(&body).or_else(|e| {
-                    Err(LokiError::Other(anyhow!("{}", e)))
-                });
-                if let Ok(response) = response {
-                    Ok(response)
-                } else {
-                    response
-                }
-            } else {
-                Err(LokiError::Other(anyhow!("Failed to parse response body")))
-            }
-        } else {
-            Err(LokiError::Other(anyhow!("Failed to query loki")))
-        }
+        Self::parse_result(result).await
     }
 
     async fn labels(&self, start: Option<i64>, end: Option<i64>) -> Result<LabelResponse, LokiError> {
@@ -114,25 +101,7 @@ impl LokiClient for HttpLokiClient {
             Err(LokiError::Other(anyhow!("{}", e)))
         });
 
-        if let Ok(result) = result {
-            let body = result.text().await.or_else(|e| {
-                Err(LokiError::Other(anyhow!("{}", e)))
-            });
-            if let Ok(body) = body {
-                let response = serde_json::from_str(&body).or_else(|e| {
-                    Err(LokiError::Other(anyhow!("{}", e)))
-                });
-                if let Ok(response) = response {
-                    Ok(response)
-                } else {
-                    response
-                }
-            } else {
-                Err(LokiError::Other(anyhow!("Failed to parse response body")))
-            }
-        } else {
-            Err(LokiError::Other(anyhow!("Failed to query loki")))
-        }
+        Self::parse_result(result).await
     }
 
     async fn label_values(&self, label: String, start: Option<i64>, end: Option<i64>) -> Result<LabelResponse, LokiError> {
@@ -153,25 +122,7 @@ impl LokiClient for HttpLokiClient {
             Err(LokiError::Other(anyhow!("{}", e)))
         });
 
-        if let Ok(result) = result {
-            let body = result.text().await.or_else(|e| {
-                Err(LokiError::Other(anyhow!("{}", e)))
-            });
-            if let Ok(body) = body {
-                let response = serde_json::from_str(&body).or_else(|e| {
-                    Err(LokiError::Other(anyhow!("{}", e)))
-                });
-                if let Ok(response) = response {
-                    Ok(response)
-                } else {
-                    response
-                }
-            } else {
-                Err(LokiError::Other(anyhow!("Failed to parse response body")))
-            }
-        } else {
-            Err(LokiError::Other(anyhow!("Failed to query loki")))
-        }
+        Self::parse_result(result).await
     }
 
     async fn series(&self, matches: Option<Vec<String>>, start: Option<i64>, end: Option<i64>) -> Result<SerieResponse, LokiError> {
@@ -195,24 +146,6 @@ impl LokiClient for HttpLokiClient {
             Err(LokiError::Other(anyhow!("{}", e)))
         });
 
-        if let Ok(result) = result {
-            let body = result.text().await.or_else(|e| {
-                Err(LokiError::Other(anyhow!("{}", e)))
-            });
-            if let Ok(body) = body {
-                let response = serde_json::from_str(&body).or_else(|e| {
-                    Err(LokiError::Other(anyhow!("{}", e)))
-                });
-                if let Ok(response) = response {
-                    Ok(response)
-                } else {
-                    response
-                }
-            } else {
-                Err(LokiError::Other(anyhow!("Failed to parse response body")))
-            }
-        } else {
-            Err(LokiError::Other(anyhow!("Failed to query loki")))
-        }
+        Self::parse_result(result).await
     }
 }
