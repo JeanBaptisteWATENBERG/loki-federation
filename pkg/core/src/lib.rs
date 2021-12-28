@@ -30,9 +30,15 @@ pub struct Datasources {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct DebugConfig {
+    pub log_level: String,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Config {
     pub server: ServerConfig,
     pub datasources: Datasources,
+    pub debug: DebugConfig,
 }
 
 #[derive(Deserialize, Serialize, Debug, Copy, Clone)]
@@ -161,7 +167,6 @@ impl FederatedLoki {
             }).buffer_unordered(MAX_CONCURRENT_REQUESTS).collect::<Vec<Result<SerieResponse, LokiError>>>();
 
         let responses: Vec<Result<SerieResponse, LokiError>> = buffered_jobs.await;
-        println!("responses: {:?}", responses);
 
         let aggregatedSerieResponse = Self::merge_serie_responses(responses);
 

@@ -14,3 +14,6 @@ serde = { version = "1.0.132", features = ["derive"] }
 actix-web = "4.0.0-beta.15"
 toml = "0.5.8"
 clap = { version = "3.0.0-rc.8", features = ["derive"] }
+log = "0.4.14"
+display_json = "0.1.3"
+env_logger = "0.9.0"

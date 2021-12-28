@@ -8,3 +8,5 @@ name = "static-http"
 urls = ["http://localhost:3100", "http://localhost:3101"]
 #TODO add TLS Configuration options
 
+[debug]
+log_level = "debug"
