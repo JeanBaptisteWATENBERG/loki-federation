@@ -141,7 +141,7 @@ async fn main() -> std::io::Result<()> {
     let server_bind_address = format!("{}:{}", config.server.bind_address, config.server.port);
     info!("Starting loki-federation on {}", server_bind_address);
 
-    let mut federated_loki = loki_federation_core::FederatedLoki::new(vec![]);
+    let federated_loki;
     match config.datasources.name.as_str() {
         "static-http" => {
             let urls = config.datasources.urls.expect("static-http requires urls");
@@ -156,7 +156,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .data(AppState {
+            .app_data(AppState {
                 federated_loki: federated_loki.clone(),
             })
             .route("/ready", web::get().to(|| HttpResponse::Ok().body("ready")))

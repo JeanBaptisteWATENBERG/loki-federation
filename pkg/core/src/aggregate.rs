@@ -1,8 +1,8 @@
 use crate::Direction;
 
-pub fn aggregate(setA: Vec<(i64, String)>, setB: Vec<(i64, String)>, direction: Direction) -> Vec<(i64, String)> {
-    let mut result = setA.clone();
-    for item in setB {
+pub fn aggregate(set_a: Vec<(i64, String)>, set_b: Vec<(i64, String)>, direction: Direction) -> Vec<(i64, String)> {
+    let mut result = set_a.clone();
+    for item in set_b {
         if !result.contains(&item) {
             match direction {
                 Direction::Forward =>

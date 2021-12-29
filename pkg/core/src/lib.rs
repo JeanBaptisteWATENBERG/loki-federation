@@ -171,13 +171,13 @@ impl FederatedLoki {
     }
 
     fn merge_serie_responses(responses: Vec<Result<SerieResponse, LokiError>>) -> SerieResponse {
-        let mut seriesData: Vec<HashMap<String, String>> = Vec::new();
+        let mut series_data: Vec<HashMap<String, String>> = Vec::new();
 
         for response in responses {
             match response {
                 Ok(response) => {
                     response.data.iter().for_each(|serie| {
-                        seriesData.push(serie.clone());
+                        series_data.push(serie.clone());
                     });
                 },
                 Err(error) => {
@@ -188,7 +188,7 @@ impl FederatedLoki {
 
         //remove duplicates in series data
         let mut already_seen_series = Vec::new();
-        seriesData.retain(|item| match already_seen_series.contains(item) {
+        series_data.retain(|item| match already_seen_series.contains(item) {
             true => false,
             _ => {
                 already_seen_series.push(item.clone());
@@ -250,7 +250,7 @@ impl FederatedLoki {
     }
 
     fn aggregate_responses(direction: Direction, responses: Vec<Result<Response, LokiError>>) -> Response {
-        let mut aggregatedResponse: Response = Response {
+        let mut aggregated_response: Response = Response {
             data: Data {
                 result_type: ResultType::Streams,
                 result: vec![],
@@ -262,16 +262,16 @@ impl FederatedLoki {
             match result {
                 Ok(response) => {
                     response.data.result.iter().for_each(|stream| {
-                        let aggregated_stream = aggregatedResponse.data.result.iter_mut().find(|s| s.stream == stream.stream);//TODO: add replica-labels
+                        let aggregated_stream = aggregated_response.data.result.iter_mut().find(|s| s.stream == stream.stream);//TODO: add replica-labels
                         match aggregated_stream {
-                            Some(mut aggregatedStream) => {
-                                let aggregatedData = Self::get_stream_data(&aggregatedStream).unwrap();
-                                let currentData = Self::get_stream_data(stream).unwrap();
-                                let merged = aggregate(aggregatedData, currentData, direction);
-                                Self::replace_stream_data(&mut aggregatedStream, merged);
+                            Some(mut aggregated_stream) => {
+                                let aggregated_data = Self::get_stream_data(&aggregated_stream).unwrap();
+                                let current_data = Self::get_stream_data(stream).unwrap();
+                                let merged = aggregate(aggregated_data, current_data, direction);
+                                Self::replace_stream_data(&mut aggregated_stream, merged);
                             },
                             None => {
-                                aggregatedResponse.data.result.push(stream.clone());
+                                aggregated_response.data.result.push(stream.clone());
                             }
                         }
                     });
@@ -281,7 +281,7 @@ impl FederatedLoki {
                 },
             }
         });
-        aggregatedResponse
+        aggregated_response
     }
 }
 
