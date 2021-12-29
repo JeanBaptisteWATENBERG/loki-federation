@@ -156,9 +156,9 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .app_data(AppState {
+            .app_data(web::Data::new(AppState {
                 federated_loki: federated_loki.clone(),
-            })
+            }))
             .route("/ready", web::get().to(|| HttpResponse::Ok().body("ready")))
             .route("/loki/api/v1/query", web::get().to(query))
             .route("/loki/api/v1/query_range", web::get().to(query_range))
