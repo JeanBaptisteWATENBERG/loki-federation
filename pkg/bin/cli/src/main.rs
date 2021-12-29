@@ -4,7 +4,7 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware};
 use clap::Parser;
 use std::path::PathBuf;
 use log::{error, info};
-use loki_federation_core::{Config, Direction, FederatedLoki};
+use loki_federation_core::{Config, DataSourcesProvider, Direction, FederatedLoki};
 use serde::{Deserialize, Serialize};
 use display_json::{DisplayAsJson};
 
@@ -141,17 +141,7 @@ async fn main() -> std::io::Result<()> {
     let server_bind_address = format!("{}:{}", config.server.bind_address, config.server.port);
     info!("Starting loki-federation on {}", server_bind_address);
 
-    let federated_loki;
-    match config.datasources.name.as_str() {
-        "static-http" => {
-            let urls = config.datasources.urls.expect("static-http requires urls");
-            info!("Using static urls {}", urls.join(", "));
-            federated_loki = loki_federation_core::FederatedLoki::new(urls);
-        }
-        _ => {
-            panic!("Unsupported datasource {}", config.datasources.name);
-        }
-    }
+    let federated_loki = loki_federation_core::FederatedLoki::new(DataSourcesProvider::new(config.datasources.clone()));
 
     HttpServer::new(move || {
         App::new()

@@ -3,16 +3,11 @@ use generic_loki_client::{LokiError, Response, LokiClient, VectorOrStream, Data,
 use http_loki_client::HttpLokiClient;
 use futures::{stream, StreamExt};
 use anyhow::Error;
-use log::warn;
+use log::{error, info, warn};
 use crate::aggregate::aggregate;
 use serde::{Deserialize, Serialize};
 
 mod aggregate;
-
-#[derive(Debug, Clone)]
-pub struct FederatedLoki {
-    backends: Vec<String>,
-}
 
 #[derive(Deserialize, Debug)]
 pub struct ServerConfig {
@@ -20,7 +15,7 @@ pub struct ServerConfig {
     pub bind_address: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Datasources {
     pub name: String,
     pub urls: Option<Vec<String>>
@@ -63,23 +58,116 @@ impl Direction {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct HttpDataSource {
+    url: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct GrpcDataSource {
+    //todo, not yet supported
+}
+
+#[derive(Debug, Clone)]
+pub enum DataSource {
+    HttpDataSource(HttpDataSource),
+    GrpcDataSource(GrpcDataSource),
+}
+
+#[derive(Debug, Clone)]
+pub struct DataSourceInstance {
+    data_source: DataSource,
+}
+
+impl DataSourceInstance {
+    pub fn new(data_source: DataSource) -> Self {
+        Self {
+            data_source
+        }
+    }
+    pub fn get_client(&self) -> Result<impl LokiClient, LokiError> {
+        match self.data_source {
+            DataSource::HttpDataSource(ref http_data_source) => {
+                let client = HttpLokiClient::new(http_data_source.url.clone());
+                Ok(client)
+            }
+            DataSource::GrpcDataSource(ref _grpc_data_source) => {
+                //todo, not yet supported
+                Err(LokiError::Other(Error::msg("grpcDataSource not yet supported")))
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DataSourcesProvider {
+    data_sources_config: Datasources
+}
+
+impl DataSourcesProvider {
+    pub fn new(data_sources_config: Datasources) -> Self {
+        Self {
+            data_sources_config
+        }
+    }
+
+    pub fn get_data_sources(&self) -> Result<Vec<DataSourceInstance>, LokiError> {
+        match self.data_sources_config.name.as_str() {
+            "static-http" => {
+                let urls_option = self.data_sources_config.urls.clone();
+                if urls_option.is_none() {
+                    return Err(LokiError::Other(Error::msg("static-http requires urls")));
+                }
+
+                let urls = urls_option.unwrap();
+
+                info!("Using static urls {}", urls.join(", "));
+                return Ok(urls.iter().map(|url| {
+                    DataSourceInstance::new(DataSource::HttpDataSource(HttpDataSource {
+                        url: url.clone(),
+                    }))
+                }).collect());
+            }
+            _ => {
+                error!("Unsupported datasource {}", self.data_sources_config.name);
+                return Err(LokiError::Other(Error::msg("Unsupported datasource")));
+            }
+        }
+    }
+}
 
 const MAX_CONCURRENT_REQUESTS: usize = 8;
 
+#[derive(Debug, Clone)]
+pub struct FederatedLoki {
+    data_sources_provider: DataSourcesProvider,
+}
+
 impl FederatedLoki {
-    pub fn new(backends: Vec<String>) -> Self {
+    pub fn new(data_sources_provider: DataSourcesProvider) -> Self {
         FederatedLoki {
-            backends,
+            data_sources_provider,
         }
     }
 
     pub async fn query(&self, query: String, limit: Option<i32>, time: Option<i64>, direction: Option<Direction>) -> Result<Response, LokiError> {
-        let buffered_jobs = stream::iter(self.backends.clone())
-            .map(|backend| {
-                //TODO: find a way to inject HttpLokiClient and rely on GenericLokiClient instead
-                let client = HttpLokiClient::new(backend.clone());
+        let data_sources_result = self.data_sources_provider.get_data_sources();
+        if let Err(loki_error) = data_sources_result {
+            return Err(loki_error);
+        }
+
+        let data_sources = data_sources_result.unwrap();
+
+        let buffered_jobs = stream::iter(data_sources)
+            .map(|data_source| {
+                let client_result = data_source.get_client();
+
                 let query = &query;
                 async move {
+                    if let Err(loki_error) = client_result {
+                        return Err(loki_error);
+                    }
+                    let client = client_result.unwrap();
                     let result = client.query(query.to_string(), limit, time, Some(direction.map_or(generic_loki_client::Direction::Backward, |direction| direction.to_generic_loki_direction()))).await;
                     result
                 }
@@ -95,14 +183,25 @@ impl FederatedLoki {
     }
 
     pub async fn query_range(&self, query: String, start: i64, end: i64, limit: Option<i32>, direction: Option<Direction>, step: Option<String>, interval: Option<String>) -> Result<Response, LokiError> {
-        let buffered_jobs = stream::iter(self.backends.clone())
-            .map(|backend| {
-                //TODO: find a way to inject HttpLokiClient and rely on GenericLokiClient instead
-                let client = HttpLokiClient::new(backend.clone());
+        let data_sources_result = self.data_sources_provider.get_data_sources();
+        if let Err(loki_error) = data_sources_result {
+            return Err(loki_error);
+        }
+
+        let data_sources = data_sources_result.unwrap();
+
+        let buffered_jobs = stream::iter(data_sources)
+            .map(|data_source| {
+                let client_result = data_source.get_client();
+
                 let query = &query;
                 let step = step.clone();
                 let interval = interval.clone();
                 async move {
+                    if let Err(loki_error) = client_result {
+                        return Err(loki_error);
+                    }
+                    let client = client_result.unwrap();
                     let result = client.query_range(query.to_string(), start, end, limit, Some(direction.map_or(generic_loki_client::Direction::Backward, |direction| direction.to_generic_loki_direction())), step, interval).await;
                     result
                 }
@@ -118,10 +217,22 @@ impl FederatedLoki {
     }
 
     pub async fn labels(&self, start: Option<i64>, end: Option<i64>) -> Result<LabelResponse, LokiError> {
-        let buffered_jobs = stream::iter(self.backends.clone())
-            .map(|backend| {
-                let client = HttpLokiClient::new(backend.clone());
+        let data_sources_result = self.data_sources_provider.get_data_sources();
+        if let Err(loki_error) = data_sources_result {
+            return Err(loki_error);
+        }
+
+        let data_sources = data_sources_result.unwrap();
+
+        let buffered_jobs = stream::iter(data_sources)
+            .map(|data_source| {
+                let client_result = data_source.get_client();
+
                 async move {
+                    if let Err(loki_error) = client_result {
+                        return Err(loki_error);
+                    }
+                    let client = client_result.unwrap();
                     let result = client.labels(start, end).await;
                     result
                 }
@@ -135,11 +246,23 @@ impl FederatedLoki {
     }
 
     pub async fn label_values(&self, label: String, start: Option<i64>, end: Option<i64>) -> Result<LabelResponse, LokiError> {
-        let buffered_jobs = stream::iter(self.backends.clone())
-            .map(|backend| {
-                let client = HttpLokiClient::new(backend.clone());
+        let data_sources_result = self.data_sources_provider.get_data_sources();
+        if let Err(loki_error) = data_sources_result {
+            return Err(loki_error);
+        }
+
+        let data_sources = data_sources_result.unwrap();
+
+        let buffered_jobs = stream::iter(data_sources)
+            .map(|data_source| {
+                let client_result = data_source.get_client();
+
                 let label = &label;
                 async move {
+                    if let Err(loki_error) = client_result {
+                        return Err(loki_error);
+                    }
+                    let client = client_result.unwrap();
                     let result = client.label_values(label.to_string(), start, end).await;
                     result
                 }
@@ -153,11 +276,23 @@ impl FederatedLoki {
     }
 
     pub async fn series(&self, matches: Option<Vec<String>>, start: Option<i64>, end: Option<i64>) -> Result<SerieResponse, LokiError> {
-        let buffered_jobs = stream::iter(self.backends.clone())
-            .map(|backend| {
-                let client = HttpLokiClient::new(backend.clone());
+        let data_sources_result = self.data_sources_provider.get_data_sources();
+        if let Err(loki_error) = data_sources_result {
+            return Err(loki_error);
+        }
+
+        let data_sources = data_sources_result.unwrap();
+
+        let buffered_jobs = stream::iter(data_sources)
+            .map(|data_source| {
+                let client_result = data_source.get_client();
+
                 let matches = matches.clone();
                 async move {
+                    if let Err(loki_error) = client_result {
+                        return Err(loki_error);
+                    }
+                    let client = client_result.unwrap();
                     let result = client.series(matches, start, end).await;
                     result
                 }
