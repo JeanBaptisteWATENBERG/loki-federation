@@ -83,15 +83,15 @@ impl FederatedLoki {
                     let result = client.query(query.to_string(), limit, time, Some(direction.map_or(generic_loki_client::Direction::Backward, |direction| direction.to_generic_loki_direction()))).await;
                     result
                 }
-            }).buffer_unordered(MAX_CONCURRENT_REQUESTS).collect::<Vec<Result<Response, LokiError>>>();;
+            }).buffer_unordered(MAX_CONCURRENT_REQUESTS).collect::<Vec<Result<Response, LokiError>>>();
 
         let direction = direction.unwrap_or(Direction::Backward);
 
         let responses = buffered_jobs.await;
 
-        let aggregatedResponse = Self::aggregate_responses(direction, responses);
+        let aggregated_response = Self::aggregate_responses(direction, responses);
 
-        Ok(aggregatedResponse)
+        Ok(aggregated_response)
     }
 
     pub async fn query_range(&self, query: String, start: i64, end: i64, limit: Option<i32>, direction: Option<Direction>, step: Option<String>, interval: Option<String>) -> Result<Response, LokiError> {
@@ -112,9 +112,9 @@ impl FederatedLoki {
 
         let responses = buffered_jobs.await;
 
-        let aggregatedResponse = Self::aggregate_responses(direction, responses);
+        let aggregated_response = Self::aggregate_responses(direction, responses);
 
-        Ok(aggregatedResponse)
+        Ok(aggregated_response)
     }
 
     pub async fn labels(&self, start: Option<i64>, end: Option<i64>) -> Result<LabelResponse, LokiError> {
@@ -129,9 +129,9 @@ impl FederatedLoki {
 
         let responses: Vec<Result<LabelResponse, LokiError>> = buffered_jobs.await;
 
-        let aggregatedLabelResponse = Self::merge_label_responses(responses);
+        let aggregated_label_response = Self::merge_label_responses(responses);
 
-        Ok(aggregatedLabelResponse)
+        Ok(aggregated_label_response)
     }
 
     pub async fn label_values(&self, label: String, start: Option<i64>, end: Option<i64>) -> Result<LabelResponse, LokiError> {
@@ -147,9 +147,9 @@ impl FederatedLoki {
 
         let responses: Vec<Result<LabelResponse, LokiError>> = buffered_jobs.await;
 
-        let aggregatedLabelResponse = Self::merge_label_responses(responses);
+        let aggregated_label_response = Self::merge_label_responses(responses);
 
-        Ok(aggregatedLabelResponse)
+        Ok(aggregated_label_response)
     }
 
     pub async fn series(&self, matches: Option<Vec<String>>, start: Option<i64>, end: Option<i64>) -> Result<SerieResponse, LokiError> {
@@ -165,9 +165,9 @@ impl FederatedLoki {
 
         let responses: Vec<Result<SerieResponse, LokiError>> = buffered_jobs.await;
 
-        let aggregatedSerieResponse = Self::merge_serie_responses(responses);
+        let aggregated_serie_response = Self::merge_serie_responses(responses);
 
-        Ok(aggregatedSerieResponse)
+        Ok(aggregated_serie_response)
     }
 
     fn merge_serie_responses(responses: Vec<Result<SerieResponse, LokiError>>) -> SerieResponse {
@@ -252,7 +252,7 @@ impl FederatedLoki {
     fn aggregate_responses(direction: Direction, responses: Vec<Result<Response, LokiError>>) -> Response {
         let mut aggregatedResponse: Response = Response {
             data: Data {
-                resultType: ResultType::streams,
+                result_type: ResultType::Streams,
                 result: vec![],
             },
             status: "success".to_string(),
@@ -262,8 +262,8 @@ impl FederatedLoki {
             match result {
                 Ok(response) => {
                     response.data.result.iter().for_each(|stream| {
-                        let aggregatedStream = aggregatedResponse.data.result.iter_mut().find(|s| s.stream == stream.stream);//TODO: add replica-labels
-                        match aggregatedStream {
+                        let aggregated_stream = aggregatedResponse.data.result.iter_mut().find(|s| s.stream == stream.stream);//TODO: add replica-labels
+                        match aggregated_stream {
                             Some(mut aggregatedStream) => {
                                 let aggregatedData = Self::get_stream_data(&aggregatedStream).unwrap();
                                 let currentData = Self::get_stream_data(stream).unwrap();

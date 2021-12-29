@@ -5,8 +5,10 @@ use thiserror::Error;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum ResultType {
-    vector,
-    streams
+    #[serde(alias = "vector")]
+    Vector,
+    #[serde(alias = "streams")]
+    Streams
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -22,8 +24,9 @@ pub struct VectorOrStream {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Data {
-    pub resultType: ResultType,
+    pub result_type: ResultType,
     pub result: Vec<VectorOrStream>,
 }
 
