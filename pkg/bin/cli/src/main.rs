@@ -134,7 +134,9 @@ async fn main() -> std::io::Result<()> {
     let config = toml::from_str::<Config>(&content)
         .expect("could not parse config file");
 
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or(config.debug.log_level));
+    env_logger::Builder::from_env(env_logger::Env::new().default_filter_or(config.debug.log_level))
+        .format_timestamp_millis()
+        .init();
 
     let server_bind_address = format!("{}:{}", config.server.bind_address, config.server.port);
     info!("Starting loki-federation on {}", server_bind_address);
