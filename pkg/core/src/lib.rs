@@ -1,12 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use generic_loki_client::{LokiError, Response, LokiClient, VectorOrStream, Data, ResultType, LabelResponse, SerieResponse};
 use http_loki_client::HttpLokiClient;
-use tokio::task;
-use futures::future::join_all;
 use futures::{stream, StreamExt};
-use std::sync::Arc;
-use std::pin::Pin;
 use anyhow::Error;
+use log::warn;
 use crate::aggregate::aggregate;
 use serde::{Deserialize, Serialize};
 
@@ -184,7 +181,7 @@ impl FederatedLoki {
                     });
                 },
                 Err(error) => {
-                    //todo log error
+                    warn!("One of the result contains an error: {}", error);
                 }
             }
         }
@@ -212,14 +209,17 @@ impl FederatedLoki {
                     match response.data {
                         Some(data) => {
                             let some_acc_data = acc.data.unwrap_or(Vec::new());
-                            let mut merged_data = some_acc_data.into_iter().chain(data.into_iter()).collect::<HashSet<String>>();
+                            let merged_data = some_acc_data.into_iter().chain(data.into_iter()).collect::<HashSet<String>>();
                             acc.data = Some(merged_data.into_iter().collect::<Vec<String>>());
                         }
                         None => {}
                     }
                     acc
                 },
-                Err(err) => acc // todo: log error
+                Err(error) => {
+                    warn!("One of the result contains an error: {}", error);
+                    acc
+                }
             }
         })
     }
@@ -262,12 +262,12 @@ impl FederatedLoki {
             match result {
                 Ok(response) => {
                     response.data.result.iter().for_each(|stream| {
-                        let mut aggregatedStream = aggregatedResponse.data.result.iter_mut().find(|s| s.stream == stream.stream);//TODO: add replica-labels
+                        let aggregatedStream = aggregatedResponse.data.result.iter_mut().find(|s| s.stream == stream.stream);//TODO: add replica-labels
                         match aggregatedStream {
                             Some(mut aggregatedStream) => {
                                 let aggregatedData = Self::get_stream_data(&aggregatedStream).unwrap();
                                 let currentData = Self::get_stream_data(stream).unwrap();
-                                let mut merged = aggregate(aggregatedData, currentData, direction);
+                                let merged = aggregate(aggregatedData, currentData, direction);
                                 Self::replace_stream_data(&mut aggregatedStream, merged);
                             },
                             None => {
@@ -276,7 +276,9 @@ impl FederatedLoki {
                         }
                     });
                 },
-                Err(e) => {},
+                Err(error) => {
+                    warn!("One of the result contains an error: {}", error);
+                },
             }
         });
         aggregatedResponse
