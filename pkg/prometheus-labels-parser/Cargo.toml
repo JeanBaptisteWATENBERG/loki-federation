@@ -1,0 +1,14 @@
+[package]
+name = "prometheus-labels-parser"
+authors = ["Jean-Baptiste WATENBERG <jeanbaptiste.watenberg@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "prometheus_labels_parser"
+
+[dependencies]
+anyhow = "1.0.51"
+log = "0.4.14"
+pest = "2.1.3"
+pest_derive = "2.1.0"

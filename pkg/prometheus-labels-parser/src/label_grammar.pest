@@ -1,0 +1,6 @@
+WHITESPACE = _{ " " }
+
+labelKey = { (ASCII_ALPHA|"_")+ }
+labelValue = { (ASCII_ALPHANUMERIC|"_"|".")+ }
+label = { labelKey ~ "=" ~ "\"" ~ labelValue ~ "\"" }
+labels = { "{" ~ label ~ ("," ~ label)* ~ "}" }

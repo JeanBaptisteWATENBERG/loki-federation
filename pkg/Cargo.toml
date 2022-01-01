@@ -3,7 +3,8 @@ members = [
     "bin/cli",
     "core",
     "generic-loki-client",
-    "http-loki-client"
+    "http-loki-client",
+    "prometheus-labels-parser"
 ]
 
 default-members=["bin/cli"]
