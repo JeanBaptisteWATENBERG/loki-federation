@@ -4,6 +4,7 @@ members = [
     "core",
     "generic-loki-client",
     "http-loki-client",
+    "grpc-loki-client",
     "prometheus-labels-parser"
 ]
 

@@ -2,6 +2,7 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
+use std::collections::HashMap;
 use anyhow::Error;
 use log::error;
 use pest::Parser;
@@ -45,6 +46,11 @@ pub fn parse_labels(string: String) -> Result<Vec<(String, String)>, Error> {
     }
 }
 
+pub fn parse_labels_into_map(string: String) -> Result<HashMap<String, String>, Error> {
+    let labels = parse_labels(string)?;
+    Ok(labels.into_iter().collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,5 +89,35 @@ mod tests {
     fn test_parse_labels_throws_when_missing_quotes() {
         let labels = parse_labels("{foo=bar,baz=qux}".to_string()).unwrap_err();
         assert_eq!(labels.to_string(), " --> 1:2\n  |\n1 | {foo=bar,baz=qux}\n  |  ^---\n  |\n  = expected label".to_string());
+    }
+
+    #[test]
+    fn test_parse_labels_throws_when_missing_key() {
+        let labels = parse_labels("{=bar}".to_string()).unwrap_err();
+        assert_eq!(labels.to_string(), " --> 1:2\n  |\n1 | {=bar}\n  |  ^---\n  |\n  = expected labelKey".to_string());
+    }
+
+    #[test]
+    fn test_parse_labels_throws_when_missing_value() {
+        let labels = parse_labels("{foo=}".to_string()).unwrap_err();
+        assert_eq!(labels.to_string(), " --> 1:2\n  |\n1 | {foo=}\n  |  ^---\n  |\n  = expected label".to_string());
+    }
+
+    #[test]
+    fn test_parse_labels_throws_when_missing_key_value_pair() {
+        let labels = parse_labels("{,baz=qux}".to_string()).unwrap_err();
+        assert_eq!(labels.to_string(), " --> 1:2\n  |\n1 | {,baz=qux}\n  |  ^---\n  |\n  = expected labelKey".to_string());
+    }
+
+    #[test]
+    fn test_parse_labels_throws_when_missing_key_value_pair_with_spaces() {
+        let labels = parse_labels("{ ,baz=qux}".to_string()).unwrap_err();
+        assert_eq!(labels.to_string(), " --> 1:3\n  |\n1 | { ,baz=qux}\n  |   ^---\n  |\n  = expected labelKey".to_string());
+    }
+
+    #[test]
+    fn test_parse_labels_into_map_one_label() {
+        let labels = parse_labels_into_map("{foo=\"bar\"}".to_string()).unwrap();
+        assert_eq!(labels, HashMap::from([("foo".to_string(), "bar".to_string())]));
     }
 }

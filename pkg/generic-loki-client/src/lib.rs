@@ -6,8 +6,10 @@ use thiserror::Error;
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum ResultType {
     #[serde(alias = "vector")]
+    #[serde(rename(serialize = "vector"))]
     Vector,
     #[serde(alias = "streams")]
+    #[serde(rename(serialize = "streams"))]
     Streams
 }
 

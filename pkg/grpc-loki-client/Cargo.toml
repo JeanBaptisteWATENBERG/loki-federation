@@ -1,0 +1,22 @@
+[package]
+name = "grpc-loki-client"
+authors = ["Jean-Baptiste WATENBERG <jeanbaptiste.watenberg@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "grpc_loki_client"
+
+[dependencies]
+generic-loki-client = { path = "../generic-loki-client" }
+prometheus-labels-parser = { path = "../prometheus-labels-parser" }
+serde = "1.0.132"
+tonic = "0.6.2"
+prost = "0.9"
+prost-types = "0.9"
+async-trait = "0.1.52"
+anyhow = "1.0.51"
+log = "0.4.14"
+
+[build-dependencies]
+tonic-build = { version = "0.6" }

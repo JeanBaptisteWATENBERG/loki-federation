@@ -4,9 +4,9 @@ bind_address = "0.0.0.0"
 #TODO add TLS Configuration options
 
 [datasources]
-name = "static-http"
-urls = ["http://localhost:3100", "http://localhost:3101"]
+name = "static-grpc-alpha"
+urls = ["http://localhost:9096", "http://localhost:9097"]
 #TODO add TLS Configuration options
 
 [debug]
-log_level = "debug"
+log_level = "info"

@@ -6,6 +6,7 @@ use anyhow::Error;
 use log::{error, info, warn};
 use crate::aggregate::aggregate;
 use serde::{Deserialize, Serialize};
+use grpc_loki_client::GrpcLokiClient;
 
 mod aggregate;
 
@@ -65,7 +66,7 @@ pub struct HttpDataSource {
 
 #[derive(Debug, Clone)]
 pub struct GrpcDataSource {
-    //todo, not yet supported
+    url: String,
 }
 
 #[derive(Debug, Clone)]
@@ -85,15 +86,15 @@ impl DataSourceInstance {
             data_source
         }
     }
-    pub fn get_client(&self) -> Result<impl LokiClient, LokiError> {
+    pub fn get_client(&self) -> Result<Box<dyn LokiClient>, LokiError> {
         match self.data_source {
             DataSource::HttpDataSource(ref http_data_source) => {
                 let client = HttpLokiClient::new(http_data_source.url.clone());
-                Ok(client)
+                Ok(Box::new(client))
             }
-            DataSource::GrpcDataSource(ref _grpc_data_source) => {
-                //todo, not yet supported
-                Err(LokiError::Other(Error::msg("grpcDataSource not yet supported")))
+            DataSource::GrpcDataSource(ref grpc_data_source) => {
+                let client = GrpcLokiClient::new(grpc_data_source.url.clone());
+                Ok(Box::new(client))
             },
         }
     }
@@ -124,6 +125,21 @@ impl DataSourcesProvider {
                 info!("Using static urls {}", urls.join(", "));
                 return Ok(urls.iter().map(|url| {
                     DataSourceInstance::new(DataSource::HttpDataSource(HttpDataSource {
+                        url: url.clone(),
+                    }))
+                }).collect());
+            }
+            "static-grpc-alpha" => {
+                let urls_option = self.data_sources_config.urls.clone();
+                if urls_option.is_none() {
+                    return Err(LokiError::Other(Error::msg("static-grpc requires urls")));
+                }
+
+                let urls = urls_option.unwrap();
+
+                info!("Using static urls {}", urls.join(", "));
+                return Ok(urls.iter().map(|url| {
+                    DataSourceInstance::new(DataSource::GrpcDataSource(GrpcDataSource {
                         url: url.clone(),
                     }))
                 }).collect());
