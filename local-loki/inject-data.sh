@@ -22,6 +22,9 @@ do
 	        then
 	                values2+=","
 	        fi
+        else
+		values1+="[ \"$(($epochInNanoseconds - $number * 1000000000))\", \"$number - a second time on same instant\" ]"
+		values1+=","
 	fi
 done
 
