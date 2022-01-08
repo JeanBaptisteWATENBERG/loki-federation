@@ -5,11 +5,11 @@ Inspired by Thanos querier prometheus federation applied to loki.
 In short, it gathers the queries from a set of loki backends and return an
 aggregated result.
 
-It is fully stateless and horiwontally scalable.
+It is fully stateless and horizontally scalable.
 
 ## Getting started
 
-To get started you need to create a simple configuration file with the follwing
+To get started you need to create a simple configuration file with the following
 minimal configuration.
 
 ```toml
