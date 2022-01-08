@@ -1,3 +1,6 @@
+//Allowing daed code in this module as it is not yet implemented
+#![allow(dead_code, unused_imports, unused_variables)]
+
 use std::collections::HashMap;
 use anyhow::anyhow;
 use generic_loki_client::{Data, Direction, LabelResponse, LokiClient, LokiError, Response, ResultType, SerieResponse, VectorOrStream};
@@ -22,7 +25,7 @@ impl GrpcLokiClient {
 
 
 pub fn from_unix_nano_timestamp(timestamp: i64) -> Timestamp {
-    let mut ts = Timestamp {
+    let ts = Timestamp {
         seconds: timestamp / 1_000_000_000,
         nanos: (timestamp % 1_000_000_000) as i32,
     };
@@ -34,7 +37,7 @@ impl LokiClient for GrpcLokiClient {
     //Query loki grpc api using tonic asynchronously
     async fn query(&self, query: String, limit: Option<i32>, time: Option<i64>, direction: Option<Direction>) -> Result<Response, LokiError> {
         info!("Query: {}", query);
-        let mut client = grpc_loki_client::querier_client::QuerierClient::connect(self.url.clone()).await;
+        let client = grpc_loki_client::querier_client::QuerierClient::connect(self.url.clone()).await;
         match client {
             Ok(mut client) => {
                 let request = grpc_loki_client::QueryRequest {//QuerySampleRequest doesn't support limit and direction, we then have to use QueryRequest instead with a 30 seconds timeframe

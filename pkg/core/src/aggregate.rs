@@ -1,4 +1,4 @@
-use crate::Direction;
+use crate::federated_loki::Direction;
 
 pub fn aggregate(set_a: Vec<(i64, String)>, set_b: Vec<(i64, String)>, direction: Direction) -> Vec<(i64, String)> {
     let mut result = set_a.clone();

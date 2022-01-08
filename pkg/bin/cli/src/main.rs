@@ -4,7 +4,9 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder, middleware};
 use clap::Parser;
 use std::path::PathBuf;
 use log::{error, info};
-use loki_federation_core::{Config, DataSourcesProvider, Direction, FederatedLoki};
+use loki_federation_core::federated_loki::{Direction, FederatedLoki};
+use loki_federation_core::config::Config;
+use loki_federation_core::datasources_provider::DataSourcesProvider;
 use serde::{Deserialize, Serialize};
 use display_json::{DisplayAsJson};
 
@@ -141,7 +143,7 @@ async fn main() -> std::io::Result<()> {
     let server_bind_address = format!("{}:{}", config.server.bind_address, config.server.port);
     info!("Starting loki-federation on {}", server_bind_address);
 
-    let federated_loki = loki_federation_core::FederatedLoki::new(DataSourcesProvider::new(config.datasources.clone()));
+    let federated_loki = FederatedLoki::new(DataSourcesProvider::new(config.datasources.clone()));
 
     HttpServer::new(move || {
         App::new()
