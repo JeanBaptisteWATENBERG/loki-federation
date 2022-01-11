@@ -17,9 +17,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose
-      working-directory: ${{env.WORKING_DIR}}
+    - uses: icepuma/rust-action@1.57.0
+      name: Build
+      with:
+        args: cd ${{env.WORKING_DIR}} && cargo build
     - name: Run tests
-      run: cargo test --workspace --verbose
-      working-directory: ${{env.WORKING_DIR}}
+      uses: icepuma/rust-action@1.57.0
+      with:
+        args: cd ${{env.WORKING_DIR}} && cargo test --workspace
